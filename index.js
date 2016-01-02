@@ -1,7 +1,7 @@
 'use strict';
 var postcss = require('postcss');
 var assets = require('./assets');
-
+var fs = require('fs');
 module.exports = postcss.plugin('postcss-direction-support', function (opts) {
     // options initials
     opts = opts || {};
@@ -36,10 +36,6 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
         var Rules = [];
         var RulesSelectors = [];
         var targetRoot;
-
-        // header
-        var comment = postcss.comment({ text: 'Direction Override' });
-        Root.append(comment);
 
         css.walkDecls(function (decl) {
             var target = decl.parent;
@@ -104,36 +100,33 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                     B_RL: []
                 };
                 rule.decl.forEach(function (decl, i) {
-                    var match = {
-                        RL:      decl.prop.match(/right|left/),
-                        padding: decl.prop.match(/padding/),
-                        margin:  decl.prop.match(/margin/),
-                        border:  decl.prop.match(/border/gi)
-                    };
+                    var match = assets.fn.match(decl.prop);
                     var target;
                     // var margin-right = decl.prop.match(/^margin-right$/);
-                    if(match.RL) {
-                        // if right/left
-                        if(match.RL.index === 0) {
-                            target = directionArray.RL;
+                    if(!assets.fn.match(decl.value).skip) {
+                        if(match.RL) {
+                            // if right/left
+                            if(match.RL.index === 0) {
+                                target = directionArray.RL;
+                            }
+                            // if padding
+                            if(match.padding) {
+                                target = directionArray.P_RL;
+                            }
+                            // if margin
+                            if(match.margin) {
+                                target = directionArray.M_RL;
+                            }
+                            // if border
+                            if(match.border) {
+                                target = directionArray.B_RL;
+                            }
+                            target.push({
+                                index: i,
+                                prop:  decl.prop,
+                                value: decl.value
+                            });
                         }
-                        // if padding
-                        if(match.padding) {
-                            target = directionArray.P_RL;
-                        }
-                        // if margin
-                        if(match.margin) {
-                            target = directionArray.M_RL;
-                        }
-                        // if border
-                        if(match.border) {
-                            target = directionArray.B_RL;
-                        }
-                        target.push({
-                            index: i,
-                            prop:  decl.prop,
-                            value: decl.value
-                        });
                     }
                 });
                 for (var prop in directionArray) {
@@ -142,6 +135,22 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                         if(value[0].value === value[1].value) {
                             rule.decl[value[0].index].value = 'skip';
                             rule.decl[value[1].index].value = 'skip';
+                        } else {
+                            // for(var i = 0; i < value.length; i++) {
+                            //     var skip = assets.fn
+                            //         .match(rule.decl[value[i].index].value)
+                            //         .skip;
+                            //     var thisProp = assets.process(
+                            //         rule.decl[value[i].index].prop,
+                            //         rule.decl[value[i].index].value
+                            //     );
+                            //     if(!skip) {
+                            //         rule.decl.push({
+                            //             prop:  thisProp.prop,
+                            //             value: 'auto'
+                            //         });
+                            //     }
+                            // }
                         }
                     } else if(value.length === 1) {
                         // check if it has no other alternatives,
@@ -151,12 +160,7 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                             target.prop,
                             target.value
                         );
-                        var match = {
-                            RL:      originalProp.prop.match(/right|left/),
-                            padding: originalProp.prop.match(/padding/),
-                            margin:  originalProp.prop.match(/margin/),
-                            border:  originalProp.prop.match(/border/)
-                        };
+                        var match = assets.fn.match(originalProp.prop);
                         if(match.RL) {
                             if(match.RL.index === 0 ||
                                 match.margin ||
@@ -205,13 +209,22 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                 }
             }
         });
-        // append Override Root to css file
-        css.append(Root);
+        // css = Root;
+        css.replaceValues(' !skip-direction', {
+            fast: 'skip-direction'
+        }, function () {
+            return '';
+        });
+        if(true) {
+            css.append(Root);
+        } else {
+            fs.writeFileSync('rtl.css', Root.toString());
+        }
     };
 });
 
 // next objectives 31/december
-// [ ] remove comment from output
+// [x] remove comment from output
 // [ ] option to specify override direction by language, or direcvtion
 // [ ] if direction option to set override direction,  !default rtl
 // [ ] option to write in one file, !default is external

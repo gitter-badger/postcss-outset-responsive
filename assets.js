@@ -61,6 +61,15 @@ module.exports = {
             list[3] = value.split(' ')[1];
             value = list.join(' ');
             return value;
+        },
+        match: function (string) {
+            return {
+                RL:      string.match(/right|left/),
+                padding: string.match(/padding/),
+                margin:  string.match(/margin/),
+                border:  string.match(/border/),
+                skip:    string.match(/!skip-direction/)
+            };
         }
     }
 };
