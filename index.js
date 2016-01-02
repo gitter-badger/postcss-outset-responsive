@@ -5,6 +5,17 @@ var fs = require('fs');
 module.exports = postcss.plugin('postcss-direction-support', function (opts) {
     // options initials
     opts = opts || {};
+
+    var options = {};
+    options.direction        = opts.dir || 'rtl';
+    options.selector         = opts.selector || '';
+    options.external         = opts.external || false;
+    options.externalFileName = opts.filename || opts.direction;
+    options.externalFilePath = opts.filePath || './';
+
+    if (options.selector === '') {
+        options.selector = opts.selector || '[dir="' + options.direction + '"]';
+    }
     // options
     // override direction
     var convertables = [
@@ -67,9 +78,14 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                 // define Selector object
                 // append Direction to Selector
                 rule.selector = rule.selector.replace('\n', '');
-                rule.selector = rule.selector.replace(',', ',\n[dir="rtl"] ');
+                rule.selector = rule.selector.replace(
+                    ',',
+                    ',\n' + options.selector + ' '
+                );
                 // Define Root and Append Selector
-                var selector = { selector: '[dir="rtl"] ' + rule.selector };
+                var selector = {
+                    selector: options.selector + ' ' + rule.selector
+                };
                 // if selector has atRule as parent
                 if(rule.target.parent.type === 'atrule') {
                     // get boolean if selector has same Parent atRule
@@ -215,16 +231,14 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
         }, function () {
             return '';
         });
-        if(true) {
-            css.append(Root);
+        if(opts.external) {
+            fs.writeFileSync(
+                options.externalFilePath + options.externalFileName + '.css',
+                Root.toString()
+            );
+            console.log(options.externalFilePath + options.externalFileName);
         } else {
-            fs.writeFileSync('rtl.css', Root.toString());
+            css.append(Root);
         }
     };
 });
-
-// next objectives 31/december
-// [x] remove comment from output
-// [ ] option to specify override direction by language, or direcvtion
-// [ ] if direction option to set override direction,  !default rtl
-// [ ] option to write in one file, !default is external
