@@ -65,10 +65,12 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                         target:   target
                     });
                 }
-                Rules[RulesSelectors.indexOf(rule)].decl.push({
-                    prop:  prop,
-                    value: value
-                });
+                if(decl.parent.parent.name !== 'keyframes') {
+                    Rules[RulesSelectors.indexOf(rule)].decl.push({
+                        prop:  prop,
+                        value: value
+                    });
+                }
             }
         });
         //
@@ -151,22 +153,6 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                         if(value[0].value === value[1].value) {
                             rule.decl[value[0].index].value = 'skip';
                             rule.decl[value[1].index].value = 'skip';
-                        } else {
-                            // for(var i = 0; i < value.length; i++) {
-                            //     var skip = assets.fn
-                            //         .match(rule.decl[value[i].index].value)
-                            //         .skip;
-                            //     var thisProp = assets.process(
-                            //         rule.decl[value[i].index].prop,
-                            //         rule.decl[value[i].index].value
-                            //     );
-                            //     if(!skip) {
-                            //         rule.decl.push({
-                            //             prop:  thisProp.prop,
-                            //             value: 'auto'
-                            //         });
-                            //     }
-                            // }
                         }
                     } else if(value.length === 1) {
                         // check if it has no other alternatives,
@@ -225,7 +211,7 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                 }
             }
         });
-        // css = Root;
+        //
         css.replaceValues(' !skip-direction', {
             fast: 'skip-direction'
         }, function () {
