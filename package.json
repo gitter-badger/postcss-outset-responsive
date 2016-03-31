@@ -1,28 +1,21 @@
 {
   "name": "postcss-direction-support",
   "version": "1.0.0",
-  "description": "PostCSS plugin to override direction and flip css properties of styles",
+  "description": "Outset Responsive is a set of helper css classes/attributes to maintain targeting responsive elements over html with no need to write repetitive style properties.",
   "keywords": [
     "postcss",
     "css",
     "postcss-plugin",
-    "rtl",
-    "ltr",
-    "direction",
-    "flip",
-    "mirror",
-    "language",
-    "rtl-support",
-    "ltr-support",
-    "direction"
+    "responsive",
+    "helpers"
   ],
   "author": "younis jad <younis.m.jad@gmail.com>",
   "license": "MIT",
-  "repository": "unijad/postcss-direction-support",
+  "repository": "unijad/postcss-outset-responsive",
   "bugs": {
-    "url": "https://github.com/unijad/postcss-direction-support/issues"
+    "url": "https://github.com/unijad/postcss-outset-responsive/issues"
   },
-  "homepage": "https://github.com/unijad/postcss-direction-support",
+  "homepage": "https://github.com/unijad/postcss-outset-responsive",
   "dependencies": {
     "postcss": "^5.0.2"
   },

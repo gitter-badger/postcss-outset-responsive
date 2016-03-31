@@ -1,230 +1,195 @@
 'use strict';
-var postcss = require('postcss');
-var assets = require('./assets');
-var fs = require('fs');
+let postcss = require('postcss');
+
 module.exports = postcss.plugin('postcss-direction-support', function (opts) {
     // options initials
     opts = opts || {};
 
-    var options = {};
-    options.direction        = opts.dir || 'rtl';
-    options.selector         = opts.selector || '';
-    options.external         = opts.external || false;
-    options.externalFileName = opts.filename || opts.direction;
-    options.externalFilePath = opts.filePath || './';
+    let options = {};
+    // types: class, attribute, media
+    options.type            = opts.type || 'class';
+    options.seprator        = opts.seprator || ':';
+    options.grid = opts.grid || {
+        selectors: {
+            column: 'col',
+            grid: 'grid',
+            wrap: 'wrap'
+        },
+        columns: 12,
+        gap: '0.5rem',
+        calc: false
 
-    if (options.selector === '') {
-        options.selector = opts.selector || '[dir="' + options.direction + '"]';
     }
-    // options
-    // override direction
-    var convertables = [
-        // paddings
-        'padding', // [ok]
-        'padding-left', // [ok]
-        'padding-right', // [ok]
-        // margins
-        'margin', // [ok]
-        'margin-left', // [ok]
-        'margin-right', // [ok]
-        // position
-        'right', // [ok]
-        'left', // [ok]
-        // border
-        'border-right',
-        'border-left',
-        // text align
-        'text-align', // [ok]
-        // floats and clear
-        'float', // [ok]
-        'clear' // [ok]
+    options.cssHelpers = opts.cssHelpers || [
+        { 'display': ['block', 'inline-block', 'inline', 'none', 'inherit'] },
+        { 'text-align': ['left', 'right', 'center', 'start', 'end', 'inherit'] },
+        { 'float': ['left', 'right', 'none', 'inherit'] },
+        { 'clear': ['left', 'right', 'none', 'inherit'] },
     ];
+    options.media = opts.media || [
+        {'screen': '(min-width: 1367px)'},
+        {'display': '(min-width: 1025px) and (max-width: 1366px)'},
+        {'tablet': '(min-width: 480px) and (max-width: 1024px)'},
+        {'tablet-portrait': '(min-width: 480px) and (max-width: 1024px) and (orientation: portrait)'},
+        {'tablet-landscape': '(min-width: 480px) and (max-width: 1024px) and (orientation: landscape)'},
+        {'tablet-retina': '(min-width: 480px) and (max-width: 1024px) and (-webkit-min-device-pixel-ratio: 2)'},
+        {'tablet-none-retina': '(min-width: 480px) and (max-width: 1024px) and (-webkit-max-device-pixel-ratio: 1)'},
+        {'mobile': '(max-width: 480px)'},
+        {'mobile-landscape': '(max-width: 480px) and (orientation: portrait)'},
+        {'mobile-portrait': '(max-width: 480px) and (orientation: landscape)'},
+        {'mobile-retina': '(max-width: 480px) and (-webkit-min-device-pixel-ratio: 2)'},
+        {'mobile-none-retina': '(max-width: 480px) and (-webkit-max-device-pixel-ratio: 1)'},
+        {'print': 'print'},
+    ];
+
+
+    let createGrid = function(Root, opts, media) {
+        for(let i = 1; i < opts.columns +1; i++) {
+            let selector;
+            var isMedia = typeof media !== 'undefined';
+            if(isMedia) {
+                var mediaSelector = media + options.seprator;
+            } else {
+                var mediaSelector = '';
+            }
+            if(options.type === 'class') {
+                selector = '[class~="' + (media !== '' ? mediaSelector : '') 
+                                       + opts.selectors.column + options.seprator + i + '"]';
+            }
+            if(options.type === 'attribute') {
+                selector = '[col~="' + (media !== '' ? mediaSelector : '') 
+                                     + i + '"]';
+            }
+            if(options.type === 'media') {
+                selector = '[' + (typeof media !== 'undefined' ? media : 'default') + '~="col' + options.seprator + i + '"]';
+            }
+            if(typeof media === 'undefined') {
+                Root.append({selector: selector});
+                Root.last.append({prop: 'width', 'value': (100/12)*i + '%'});
+            } else {
+                if(Root.last.type === 'atrule') {
+                    Root.last.append({selector: selector});
+                    Root.last.last.append({prop: 'width', 'value': (100/12)*i + '%'});
+                }
+            }
+        }
+    }
+
+    let responsivePicutre = function(Root, media) {
+        if(Root.last.type === 'atrule') {
+            Root.last.append({selector: '[media-type]'});
+            Root.last.last.append({prop: 'display', 'value': 'none !important'});
+
+            Root.last.append({selector: '[media-type=' + media + ']'});
+            Root.last.last.append({prop: 'display', 'value': 'block !important'});
+        }
+    }
+
+    let loopDecl = function(Root, media) {
+        media = media ? media : '';
+        for(let i in options.cssHelpers) {
+            const that = options.cssHelpers[i];
+            for(let key in that) {
+                for(let prop in that[key]) {
+                    let selector;
+                    if(options.type === 'class') {
+                        selector = '[class~="' + (media !== '' ? media + options.seprator : '')
+                                               + key + options.seprator + that[key][prop] + '"]';
+                    }
+                    if(options.type === 'attribute') {
+                        selector = '[' + key + '~="' + (media !== '' ? media + options.seprator : '') + that[key][prop] + '"]';   
+                    }
+                    if(options.type === 'media') {
+                        selector = '[' + (media !== '' ? media : 'default') + '~="' + key + options.seprator + that[key][prop] + '"]';   
+                    }
+                    if(media === '') {
+                        Root.append({selector: selector});
+                        Root.last.append({prop: key, 'value': that[key][prop]});
+                    } else {
+                        if(Root.last.type === 'atrule') {
+                            Root.last.append({selector: selector});
+                            Root.last.last.append({prop: key, 'value': that[key][prop]});
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    let loopMedia = function(Root, media) {
+        for(let i in media) {
+            for(let key in media[i]) {
+                let value = media[i][key];
+                let MediaRoot = postcss.parse('@media ' + value + ' {}');
+                
+                responsivePicutre(MediaRoot, key)
+                loopDecl(MediaRoot, key)
+                createGrid(MediaRoot, options.grid, key)
+
+                Root.append(MediaRoot)
+            }
+        }
+    }
+
+    let buildGeneral = function() {
+        var subRoot = postcss.root();
+        var localSelectors = {
+            col: '',
+            grid: '',
+            clearfix: ''
+        }
+        if(options.type === 'class') {
+            localSelectors.col = '[class*=' + options.grid.selectors.column + ']'
+            localSelectors.grid = '.' + options.grid.selectors.grid
+            localSelectors.clearfix = '.' + options.grid.selectors.clearfix
+            localSelectors.wrap = '.' + options.grid.selectors.wrap
+        }
+        if(options.type === 'attribute') {
+            localSelectors.col = '[' + options.grid.selectors.column + ']'
+            localSelectors.grid = '[' + options.grid.selectors.grid + ']'
+            localSelectors.clearfix = '[' + options.grid.selectors.clearfix + ']'
+            localSelectors.wrap = '[' + options.grid.selectors.wrap + ']'
+        }
+        if(options.type === 'media') {
+            localSelectors.col = '[default*="' + options.grid.selectors.column + '"]'
+            localSelectors.grid = '[default*="' + options.grid.selectors.grid + '"]'
+            localSelectors.clearfix = '[default*="' + options.grid.selectors.clearfix + '"]'
+            localSelectors.wrap = '[default*="' + options.grid.selectors.wrap + '"]'
+        }
+        // column
+        subRoot.append({selector: localSelectors.col})
+        subRoot.last.append({prop: 'float', value: 'left'});
+        subRoot.last.append({prop: 'width', value: '100%'});
+        // grid
+        subRoot.append({selector: localSelectors.grid})
+        subRoot.last.append({prop: 'margin', value: options.grid.gap + ' -' + options.grid.gap});
+        // clearfix
+        subRoot.append({selector: localSelectors.grid + ':before, ' + localSelectors.grid + ':after'})
+        subRoot.last.append({prop: 'display', value: 'table'});
+        subRoot.last.append({prop: 'clear', value: 'both'});
+        // wrap
+        subRoot.append({selector: localSelectors.wrap})
+        subRoot.last.append({prop: 'margin-right', value: 'auto'});
+        subRoot.last.append({prop: 'margin-left', value: 'auto'});
+        subRoot.last.append({prop: 'float', value: 'none'});
+        // box-sizing
+        subRoot.append({selector: '*'})
+        subRoot.last.append({prop: 'box-sizing', value: 'border-box'});
+
+        return subRoot;
+    }
 
     return function (css) {
         'use strict';
-        // create new root
-        var Root = postcss.root();
-        var Rules = [];
-        var RulesSelectors = [];
-        var targetRoot;
-
-        css.walkDecls(function (decl) {
-            var target = decl.parent;
-            var rule = decl.parent.selector;
-            var prop = decl.prop;
-            var value = decl.value;
-            // check if property is convertable
-            if(convertables.indexOf(prop) !== -1) {
-                // build properties
-                if(RulesSelectors.indexOf(rule) === -1) {
-                    // push properties to Rule
-                    RulesSelectors.push(rule);
-                    Rules.push({
-                        selector: rule,
-                        decl:     [],
-                        target:   target
-                    });
-                }
-                if(decl.parent.parent.name !== 'keyframes') {
-                    Rules[RulesSelectors.indexOf(rule)].decl.push({
-                        prop:  prop,
-                        value: value
-                    });
-                }
-            }
-        });
-        //
-        // console.log(Rules)
-        Rules.forEach(function (rule) {
-            if(rule.decl.length > 0) {
-                // define Selector object
-                // append Direction to Selector
-                rule.selector = rule.selector.replace('\n', '');
-                rule.selector = rule.selector.replace(
-                    ',',
-                    ',\n' + options.selector + ' '
-                );
-                // Define Root and Append Selector
-                var selector = {
-                    selector: options.selector + ' ' + rule.selector
-                };
-                // if selector has atRule as parent
-                if(rule.target.parent.type === 'atrule') {
-                    // get boolean if selector has same Parent atRule
-                    var atRuleMatches = {
-                        name:   targetRoot.name === rule.target.parent.name,
-                        params: targetRoot.params === rule.target.parent.params
-                    };
-                    // if selectors deosnt share same parent, create new atRule
-                    if (!atRuleMatches.name && !atRuleMatches.params) {
-                        var atRule = postcss.atRule({
-                            name:   rule.target.parent.name,
-                            params: rule.target.parent.params
-                        });
-                        // append newly created atRule to end of Root
-                        Root.append(atRule);
-                    }
-                    // update Target Root with the atRule Root
-                    targetRoot = Root.last;
-                } else { // if not atRule
-                    // set target to Main Root
-                    targetRoot = Root;
-                }
-                // check if opposite direction are set
-                var directionArray = {
-                    RL:   [],
-                    M_RL: [],
-                    P_RL: [],
-                    B_RL: []
-                };
-                rule.decl.forEach(function (decl, i) {
-                    var match = assets.fn.match(decl.prop);
-                    var target;
-                    // var margin-right = decl.prop.match(/^margin-right$/);
-                    if(!assets.fn.match(decl.value).skip) {
-                        if(match.RL) {
-                            // if right/left
-                            if(match.RL.index === 0) {
-                                target = directionArray.RL;
-                            }
-                            // if padding
-                            if(match.padding) {
-                                target = directionArray.P_RL;
-                            }
-                            // if margin
-                            if(match.margin) {
-                                target = directionArray.M_RL;
-                            }
-                            // if border
-                            if(match.border) {
-                                target = directionArray.B_RL;
-                            }
-                            target.push({
-                                index: i,
-                                prop:  decl.prop,
-                                value: decl.value
-                            });
-                        }
-                    }
-                });
-                for (var prop in directionArray) {
-                    var value = directionArray[prop];
-                    if(value.length === 2) {
-                        if(value[0].value === value[1].value) {
-                            rule.decl[value[0].index].value = 'skip';
-                            rule.decl[value[1].index].value = 'skip';
-                        }
-                    } else if(value.length === 1) {
-                        // check if it has no other alternatives,
-                        // create auto or null for alternative
-                        var target = rule.decl[value[0].index];
-                        var originalProp = assets.process(
-                            target.prop,
-                            target.value
-                        );
-                        var match = assets.fn.match(originalProp.prop);
-                        if(match.RL) {
-                            if(match.RL.index === 0 ||
-                                match.margin ||
-                                match.padding
-                            ) {
-                                rule.decl.push({
-                                    prop:  originalProp.prop,
-                                    value: 'auto'
-                                });
-                            }
-                            if(match.border) {
-                                originalProp.value = '0';
-                                rule.decl.push({
-                                    prop:  originalProp.prop,
-                                    value: originalProp.value
-                                });
-                            }
-                        }
-                    }
-                }
-                // Add Properties to Rule
-                var skippedItems = [];
-                var itemDecls = [];
-                rule.decl.forEach(function (decl, i) {
-                    // convert prop and value
-                    var assetProccess = assets.process(decl.prop, decl.value);
-                    decl.prop = assetProccess.prop;
-                    decl.value = assetProccess.value;
-                    //
-                    if(!assetProccess.skip) {
-                        itemDecls.push({
-                            prop:  decl.prop,
-                            value: decl.value
-                        });
-                    } else {
-                        skippedItems.push(i);
-                    }
-                });
-
-                if(skippedItems.length !== rule.decl.length) {
-                    // append Selector to previously Defined Root
-                    targetRoot.append(selector);
-                    itemDecls.forEach(function (decl) {
-                        targetRoot.last.append(decl);
-                    });
-                }
-            }
-        });
-        //
-        css.replaceValues(' !skip-direction', {
-            fast: 'skip-direction'
-        }, function () {
-            return '';
-        });
-        if(opts.external) {
-            fs.writeFileSync(
-                options.externalFilePath + options.externalFileName + '.css',
-                Root.toString()
-            );
-            console.log(options.externalFilePath + options.externalFileName);
-        } else {
-            css.append(Root);
-        }
+        // create new Root;
+        let Root = postcss.root();
+        // write general selectors here
+        Root.append(buildGeneral());
+        // loop declarations and append defaults to css Root;
+        loopDecl(Root);
+        createGrid(Root, options.grid);
+        // loop media
+        loopMedia(Root, options.media);
+        css.append(Root);
     };
 });
