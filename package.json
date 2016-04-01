@@ -1,0 +1,31 @@
+{
+  "name": "postcss-outset-responsive",
+  "version": "1.0.0",
+  "description": "Outset Responsive is a set of helper css classes/attributes to maintain targeting responsive elements over html with no need to write repetitive style properties.",
+  "keywords": [
+    "postcss",
+    "css",
+    "postcss-plugin",
+    "responsive",
+    "helpers"
+  ],
+  "author": "younis jad <younis.m.jad@gmail.com>",
+  "license": "MIT",
+  "repository": "unijad/postcss-outset-responsive",
+  "bugs": {
+    "url": "https://github.com/unijad/postcss-outset-responsive/issues"
+  },
+  "homepage": "https://github.com/unijad/postcss-outset-responsive",
+  "dependencies": {
+    "postcss": "^5.0.2"
+  },
+  "devDependencies": {
+    "chai": "^3.2.0",
+    "gulp": "^3.9.0",
+    "gulp-eslint": "^1.0.0",
+    "gulp-mocha": "^2.1.3"
+  },
+  "scripts": {
+    "build": "gulp"
+  }
+}
