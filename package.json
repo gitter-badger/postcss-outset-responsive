@@ -1,5 +1,5 @@
 {
-  "name": "postcss-direction-support",
+  "name": "postcss-outset-responsive",
   "version": "1.0.0",
   "description": "Outset Responsive is a set of helper css classes/attributes to maintain targeting responsive elements over html with no need to write repetitive style properties.",
   "keywords": [
