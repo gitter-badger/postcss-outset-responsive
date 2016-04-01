@@ -23,8 +23,7 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
             wrap: 'wrap' //# wrap selector
         },
         columns: 12, //# number of columns
-        gap: '0.5rem', //# default grid gap
-        calc: false //# use of css calc() "IE 9+ support"
+        gap: '0.5rem' //# default grid gap
     }
     //# responsive helpers:
     //# selector and properties to be used in responsive override
@@ -38,16 +37,14 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
     options.media = opts.media || [
         {'screen': '(min-width: 1367px)'},
         {'display': '(min-width: 1025px) and (max-width: 1366px)'},
-        {'tablet': '(min-width: 480px) and (max-width: 1024px)'},
-        {'tablet-portrait': '(min-width: 480px) and (max-width: 1024px) and (orientation: portrait)'},
-        {'tablet-landscape': '(min-width: 480px) and (max-width: 1024px) and (orientation: landscape)'},
-        {'tablet-retina': '(min-width: 480px) and (max-width: 1024px) and (-webkit-min-device-pixel-ratio: 2)'},
-        {'tablet-none-retina': '(min-width: 480px) and (max-width: 1024px) and (-webkit-max-device-pixel-ratio: 1)'},
-        {'mobile': '(max-width: 480px)'},
-        {'mobile-landscape': '(max-width: 480px) and (orientation: portrait)'},
-        {'mobile-portrait': '(max-width: 480px) and (orientation: landscape)'},
-        {'mobile-retina': '(max-width: 480px) and (-webkit-min-device-pixel-ratio: 2)'},
-        {'mobile-none-retina': '(max-width: 480px) and (-webkit-max-device-pixel-ratio: 1)'},
+        {'medium': '(min-width: 480px) and (max-width: 1024px)'},
+        {'medium-portrait': '(min-width: 480px) and (max-width: 1024px) and (orientation: portrait)'},
+        {'medium-landscape': '(min-width: 480px) and (max-width: 1024px) and (orientation: landscape)'},
+        {'medium-retina': '(min-width: 480px) and (max-width: 1024px) and (-webkit-min-device-pixel-ratio: 2)'},
+        {'small': '(max-width: 480px)'},
+        {'small-landscape': '(max-width: 480px) and (orientation: portrait)'},
+        {'small-portrait': '(max-width: 480px) and (orientation: landscape)'},
+        {'small-retina': '(max-width: 480px) and (-webkit-min-device-pixel-ratio: 2)'},
         {'print': 'print'}
     ];
     /*
@@ -57,10 +54,19 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
     # @ @param {object} opts - plugin options
     # @ @param {object} media - media query object
     */
-    const createGrid = function(Root, opts, media) {
+    const createGrid = function(Root, opts, media, type) {
         //# loop through columns
         for(let i = 1; i < opts.columns +1; i++) {
-            let selector; //# create empty selector variable
+            let selector; //# variable to hold selector to be added to Root
+            let target; //# variable to hold selector
+            let equate; //# variable to hold equation
+            if(type === 'grid') { //# if grid, use grid selector
+                target = opts.selectors.grid;
+                equate = (100/i);
+            } else if(type === 'col') { //# if column, use column selector
+                target = opts.selectors.column;
+                equate = (100/options.grid.columns)*i;
+            }
             let isMedia = typeof media !== 'undefined'; //# check if it's in media query
             let mediaSelector = '';
             if(isMedia) { //# if detects media query
@@ -71,30 +77,29 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
                 //# @example: [class="screen:col:12"]
                 //# @example: [class="col:12"]
                 selector = '[class~="' + (media !== '' ? mediaSelector : '') 
-                                       + opts.selectors.column + options.seprator + i + '"]';
+                                       + target + options.seprator + i + '"]';
             }
             if(options.type === 'attribute') { //# if css selector type is {attribute}
                 //# create selector
                 //# @example: [col="screen:12"]
                 //# @example: [col="col:12"]
-                selector = '[col~="' + (media !== '' ? mediaSelector : '') 
-                                     + i + '"]';
+                selector = '[' + target + '~="' + (media !== '' ? mediaSelector : '') + i + '"]';
             }
             if(options.type === 'media') { //# if css selector type is {media}
                 //# create selector
                 //# @example: [screen="col:12"]
                 //# @example: [default="col:12"]
-                selector = '[' + (typeof media !== 'undefined' ? media : 'default') + '~="col' + options.seprator + i + '"]';
+                selector = '[' + (typeof media !== 'undefined' ? media : 'default') + '~="' + target + options.seprator + i + '"]';
             }
             if(typeof media === 'undefined') { //# if css selector type is undefined
                 //# append selector to main root
                 Root.append({selector: selector});
-                Root.last.append({prop: 'width', 'value': (100/options.grid.columns)*i + '%'});
+                Root.last.append({prop: 'width', 'value': equate + '%'});
             } else { //# if detects media selector
                 if(Root.last.type === 'atrule') { //# check if media is a media query atrule
                     //# append selector to media query
                     Root.last.append({selector: selector});
-                    Root.last.last.append({prop: 'width', 'value': (100/options.grid.columns)*i + '%'});
+                    Root.last.last.append({prop: 'width', 'value': equate + '%'});
                 }
             }
         }
@@ -181,13 +186,14 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
             for(let key in media[i]) {
                 //# define value and mediaRoot emelents
                 let value = media[i][key];
-                let MediaRoot = postcss.parse('@media ' + value + ' {}');
+                let MediaRoot = postcss.parse('@media only screen and ' + value + ' {}');
                 //# build Media Queries
                 responsiveMedia(MediaRoot, key)
                 //# build css Declarations and properties
                 loopDecl(MediaRoot, key)
                 //# build css grid
-                createGrid(MediaRoot, options.grid, key)
+                createGrid(MediaRoot, options.grid, key, 'col')
+                createGrid(MediaRoot, options.grid, key, 'grid')
                 //# append this Media to postcss Root
                 Root.append(MediaRoot)
             }
@@ -270,7 +276,8 @@ module.exports = postcss.plugin('postcss-direction-support', function (opts) {
         Root.append(buildGeneral());
         //# loop declarations and append defaults to css Root;
         loopDecl(Root);
-        createGrid(Root, options.grid);
+        createGrid(Root, options.grid, null, 'col');
+        createGrid(Root, options.grid, null, 'grid');
         //# loop media
         loopMedia(Root, options.media);
         css.append(Root);
