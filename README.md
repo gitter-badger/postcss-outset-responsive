@@ -1,5 +1,7 @@
 # Outset - Responsive
 
+[![Join the chat at https://gitter.im/unijad/postcss-outset-responsive](https://badges.gitter.im/unijad/postcss-outset-responsive.svg)](https://gitter.im/unijad/postcss-outset-responsive?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Outset - Responsive is an Essential css helpers to fully control responsive html elements.
 
 ## install
